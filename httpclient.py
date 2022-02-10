@@ -18,11 +18,13 @@
 # Write your own HTTP GET and POST
 # The point is to understand what you have to send and get experience with it
 
+from ast import parse
 import sys
 import socket
 import re
 # you may use urllib to encode data appropriately
 import urllib.parse
+import pdb
 
 def help():
     print("httpclient.py [GET/POST] [URL]\n")
@@ -40,14 +42,15 @@ class HTTPClient(object):
         self.socket.connect((host, port))
         return None
 
-    def get_code(self, data):
-        return None
+    def get_code(self, data):        
+        return data[9:12]
 
     def get_headers(self,data):
         return None
 
     def get_body(self, data):
-        return None
+        bodyStartPos = data.find("\r\n\r\n")
+        return data[bodyStartPos+4:]
     
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -65,11 +68,45 @@ class HTTPClient(object):
                 buffer.extend(part)
             else:
                 done = not part
-        return buffer.decode('utf-8')
+        return buffer
+        #return buffer.decode('utf-8')# doesn't work with google
+
+
 
     def GET(self, url, args=None):
         code = 500
         body = ""
+        parseResult = urllib.parse.urlparse(url)
+
+        #Init port
+        port  = parseResult.port
+        if parseResult.port == None:
+            if parseResult.scheme == "http":
+                port = 80
+            elif parseResult.scheme == "https":
+                port = 443
+            else:
+                raise Exception("No scheme given in URL (http or https?)")
+
+        self.connect(parseResult.netloc, port)
+
+        path = parseResult.path
+        if path == "":
+            path = "/"
+        msg = f"GET {path} HTTP/1.1\r\nHost: {parseResult.netloc}\r\nAccept: */*\r\nConnection: close\r\n\r\n"
+        self.sendall(msg)
+
+        respBuffer = self.recvall(self.socket)
+        try:
+            resp = respBuffer.decode("utf-8")
+        except:#google.com?
+            resp = respBuffer.decode("latin-1")
+
+        self.close()
+
+        code = self.get_code(resp)
+        body = self.get_body(resp)
+        pdb.set_trace()
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
