@@ -37,13 +37,15 @@ class HTTPClient(object):
     #def get_host_port(self,url):
 
     def connect(self, host, port):
-        print(f"\nConnecting to: {host}\nport:{port}\n")
+        #hostADR = socket.gethostbyname(host)
+        #print(f"\nConnecting to: {host}\nport:{port}\n")
+        #print(f"adr:{hostADR}\n")
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((host, port))
         return None
 
     def get_code(self, data):        
-        return data[9:12]
+        return int(data[9:12])
 
     def get_headers(self,data):
         return None
@@ -73,7 +75,9 @@ class HTTPClient(object):
 
     def parseUrl(self, url):
         parseResult = urllib.parse.urlparse(url)
+        #host
         host = parseResult.netloc
+        host = host.split(":")[0]
         #port
         port  = parseResult.port
         if parseResult.port == None:
@@ -82,11 +86,14 @@ class HTTPClient(object):
             elif parseResult.scheme == "https":#not required but nice to have
                 port = 443
             else:
-                raise Exception("No scheme given in URL (http or https?) and no port given")  
+                pass
+                #raise Exception("No scheme given in URL (http or https?) and no port given")  
         #path
         path = parseResult.path
         if path == "":
             path = "/"
+
+        
 
         return host, port, path
 
@@ -108,12 +115,16 @@ class HTTPClient(object):
         body = ""
 
         host, port, path = self.parseUrl(url)
+        #print(f"Parsed: host{host}, port{port}, path{path}\nfrom:{url}")
         self.connect(host, port)
 
-        msg = f"GET {path} HTTP/1.1\r\nHost: {host}\r\nAccept: */*\r\nConnection: close\r\n\r\n"
+        msg = f"GET {path} HTTP/1.1\r\nHost: {host}:{port}\r\nAccept: */*\r\nConnection: close\r\n\r\n"
         self.sendall(msg)
 
         code, body = self.getResp()
+
+        #print(f"\n       DONE GET:\n\tCODE:{code}")
+
 
         return HTTPResponse(code, body)
 
