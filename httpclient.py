@@ -18,7 +18,6 @@
 # Write your own HTTP GET and POST
 # The point is to understand what you have to send and get experience with it
 
-from ast import parse
 import sys
 import socket
 import re
@@ -38,6 +37,7 @@ class HTTPClient(object):
     #def get_host_port(self,url):
 
     def connect(self, host, port):
+        print(f"\nConnecting to: {host}\nport:{port}\n")
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((host, port))
         return None
@@ -79,10 +79,10 @@ class HTTPClient(object):
         if parseResult.port == None:
             if parseResult.scheme == "http":
                 port = 80
-            elif parseResult.scheme == "https":
+            elif parseResult.scheme == "https":#not required but nice to have
                 port = 443
             else:
-                raise Exception("No scheme given in URL (http or https?)")  
+                raise Exception("No scheme given in URL (http or https?) and no port given")  
         #path
         path = parseResult.path
         if path == "":
