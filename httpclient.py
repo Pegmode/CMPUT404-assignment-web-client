@@ -24,7 +24,7 @@ import socket
 import re
 # you may use urllib to encode data appropriately
 import urllib.parse
-import pdb
+#import pdb
 
 def help():
     print("httpclient.py [GET/POST] [URL]\n")
@@ -71,14 +71,10 @@ class HTTPClient(object):
         return buffer
         #return buffer.decode('utf-8')# doesn't work with google
 
-
-
-    def GET(self, url, args=None):
-        code = 500
-        body = ""
+    def parseUrl(self, url):
         parseResult = urllib.parse.urlparse(url)
-
-        #Init port
+        host = parseResult.netloc
+        #port
         port  = parseResult.port
         if parseResult.port == None:
             if parseResult.scheme == "http":
@@ -86,16 +82,15 @@ class HTTPClient(object):
             elif parseResult.scheme == "https":
                 port = 443
             else:
-                raise Exception("No scheme given in URL (http or https?)")
-
-        self.connect(parseResult.netloc, port)
-
+                raise Exception("No scheme given in URL (http or https?)")  
+        #path
         path = parseResult.path
         if path == "":
             path = "/"
-        msg = f"GET {path} HTTP/1.1\r\nHost: {parseResult.netloc}\r\nAccept: */*\r\nConnection: close\r\n\r\n"
-        self.sendall(msg)
 
+        return host, port, path
+
+    def getResp(self):
         respBuffer = self.recvall(self.socket)
         try:
             resp = respBuffer.decode("utf-8")
@@ -106,12 +101,40 @@ class HTTPClient(object):
 
         code = self.get_code(resp)
         body = self.get_body(resp)
-        pdb.set_trace()
+        return code, body
+
+    def GET(self, url, args=None):
+        code = 500
+        body = ""
+
+        host, port, path = self.parseUrl(url)
+        self.connect(host, port)
+
+        msg = f"GET {path} HTTP/1.1\r\nHost: {host}\r\nAccept: */*\r\nConnection: close\r\n\r\n"
+        self.sendall(msg)
+
+        code, body = self.getResp()
+
         return HTTPResponse(code, body)
+
 
     def POST(self, url, args=None):
         code = 500
         body = ""
+
+        host, port, path = self.parseUrl(url)
+        self.connect(host, port)
+
+        if not args:
+            args = ""
+        else:
+            args = urllib.parse.urlencode(args)
+
+        msg =f"POST {path} HTTP/1.1\r\nHost: {host}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {len(args)}\r\nConnection: close\r\n\r\n{args}"
+        self.sendall(msg)
+
+        code, body = self.getResp()
+
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
